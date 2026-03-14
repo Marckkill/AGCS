@@ -1,0 +1,20 @@
+<RCC>
+    <!-- Logos de branding Agrohawk -->
+    <qresource prefix="/custom/img">
+        <file alias="agrohawk_logo_indoor.svg">res/images/logo.svg</file>
+        <file alias="agrohawk_logo_outdoor.svg">res/images/logo.svg</file>
+        <file alias="agrohawk_name.svg">res/images/name.svg</file>
+        <file alias="agrohawk_icon.png">res/images/icon.png</file>
+    </qresource>
+
+    <!-- Override do logo QGC no toolbar e settings -->
+    <qresource prefix="/Custom">
+        <file alias="res/QGCLogoFull.svg">res/images/logo.svg</file>
+        <file alias="res/QGCLogoWhite.svg">res/images/logo.svg</file>
+    </qresource>
+
+    <!-- Override do FlyViewCustomLayer -->
+    <qresource prefix="/Custom/qml">
+        <file alias="QGroundControl/FlightDisplay/FlyViewCustomLayer.qml">src/FlyViewCustomLayer.qml</file>
+    </qresource>
+</RCC>
