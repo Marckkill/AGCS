@@ -50,14 +50,15 @@ Real-time spray system data via `NAMED_VALUE_FLOAT` (MAVLink msg 251):
 
 ### FPV Head-Up Display (HUD)
 Toggle button on the fly view (above AGH Telemetry widget) enables a full FPV HUD overlay on the video stream:
-- **Semi-transparent artificial horizon** — sky/ground visible through the camera feed
+- **Line-only artificial horizon** — white horizon line + pitch ladder, no colored sky/ground (video fully visible)
 - **Heading tape** — compass with cardinal points and degree readout
 - **Speed tape** — airspeed (IAS) or ground speed with scrolling ladder
 - **Altitude tape** — relative altitude with scrolling ladder
 - **VSI** — vertical speed indicator bar with numeric readout
-- **Engine panel** — RPM, fuel %, throttle %, oil pressure, CHT (cylinder head temperature)
-- **Sprayer panel** — tank level %, pump ON/OFF status
-- **Status bar** — ground speed, flight mode, armed state, battery voltage/%, home distance + arrow, GPS fix
+- **Status bar** (3-column layout):
+  - Left: ground speed, home distance + direction arrow
+  - Center: flight mode + armed state, GPS fix, pump ON/OFF + tank %
+  - Right: battery voltage/%, RPM + throttle, fuel + oil + CHT
 - **Critical alerts** — flashing warnings for over-temp, low oil pressure, low fuel
 - Compact mode for PiP (picture-in-picture) windows
 
@@ -149,6 +150,7 @@ C:\Qt\6.8.3\msvc2022_64\bin\windeployqt.exe qgc\build\Release\AGCS.exe --qmldir 
 
 - **Locale bug:** QGC may crash or show parsing errors if Windows regional settings use comma as decimal separator. Set `LANG=en_US` or run with `--locale en_US` if you encounter this.
 - **qt-cmake.bat must use `call`:** When invoking `qt-cmake.bat` from another `.bat` file, always prefix with `call` — otherwise the calling script terminates after qt-cmake finishes.
+- **QtMultimedia crash (Qt 6.8.3):** `QVideoFrame::unmap` null pointer dereference in `Qt6Multimedia.dll` causes crash after ~5 min of video streaming (UVC cameras). This is a Qt bug, not AGCS. Workaround: use GStreamer backend instead of QtMultimedia, or avoid leaving video stream open for extended periods.
 
 ## Pixhawk Lua Script
 

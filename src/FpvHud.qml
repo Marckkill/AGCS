@@ -1,7 +1,7 @@
 // =============================================================================
 // FpvHud.qml — Agrohawk GCS
 // Full FPV Head-Up Display overlay for fixed-wing piloting
-// Semi-transparent — video feed visible through the horizon
+// No colored horizon — only white lines over the video feed
 // Based on QGC v5.0.8 (Stable_V5.0)
 // =============================================================================
 import QtQuick
@@ -68,51 +68,15 @@ Item {
     readonly property real  _bigFont:    _fontSize * 1.3
     readonly property real  _smallFont:  _fontSize * 0.85
 
-    // =========================================================================
-    // ARTIFICIAL HORIZON (Canvas) — SEMI-TRANSPARENT
-    // =========================================================================
-    Canvas {
-        id: horizonCanvas
-        anchors.fill: parent
-        renderStrategy: Canvas.Cooperative
-        opacity: 0.35
-
-        onPaint: {
-            var ctx = getContext("2d")
-            var w = width
-            var h = height
-            var cx = w / 2
-            var cy = h / 2
-
-            ctx.clearRect(0, 0, w, h)
-            ctx.save()
-
-            ctx.translate(cx, cy)
-            ctx.rotate(-_roll * _deg2rad)
-
-            var ppd = h / 45
-            var pitchOffset = _pitch * ppd
-
-            // Sky
-            var skyGrad = ctx.createLinearGradient(0, -h, 0, pitchOffset)
-            skyGrad.addColorStop(0, "#0a2040")
-            skyGrad.addColorStop(1, "#2a6090")
-            ctx.fillStyle = skyGrad
-            ctx.fillRect(-w, -h * 2, w * 2, h * 2 + pitchOffset)
-
-            // Ground
-            var gndGrad = ctx.createLinearGradient(0, pitchOffset, 0, h * 2)
-            gndGrad.addColorStop(0, "#4a3018")
-            gndGrad.addColorStop(1, "#2a1808")
-            ctx.fillStyle = gndGrad
-            ctx.fillRect(-w, pitchOffset, w * 2, h * 3)
-
-            ctx.restore()
-        }
+    // GPS lock name helper
+    function gpsLockName(lock) {
+        var names = ["No GPS", "No Fix", "2D", "3D", "DGPS", "RTK Float", "RTK Fix"]
+        var idx = Math.round(lock)
+        return (idx >= 0 && idx < names.length) ? names[idx] : "?"
     }
 
     // =========================================================================
-    // HORIZON LINES & INSTRUMENTS (Canvas) — fully opaque
+    // HORIZON LINES ONLY (Canvas) — no colored sky/ground
     // =========================================================================
     Canvas {
         id: horizonLines
@@ -135,8 +99,8 @@ Item {
             var ppd = h / 45
             var pitchOffset = _pitch * ppd
 
-            // Horizon line
-            ctx.strokeStyle = "rgba(255,255,255,0.7)"
+            // Horizon line — white
+            ctx.strokeStyle = "rgba(255,255,255,0.8)"
             ctx.lineWidth = 2
             ctx.beginPath()
             ctx.moveTo(-w, pitchOffset)
@@ -154,7 +118,7 @@ Item {
                 var y = pitchOffset - deg * ppd
                 var halfW = (deg % 10 === 0) ? w * 0.12 : w * 0.06
 
-                ctx.strokeStyle = "rgba(255,255,255,0.6)"
+                ctx.strokeStyle = "rgba(255,255,255,0.5)"
                 ctx.lineWidth = (deg % 10 === 0) ? 1.5 : 1
                 ctx.beginPath()
                 ctx.moveTo(-halfW, y)
@@ -237,8 +201,8 @@ Item {
     // Repaint on attitude changes
     Connections {
         target: root
-        function on_RollChanged()  { horizonCanvas.requestPaint(); horizonLines.requestPaint() }
-        function on_PitchChanged() { horizonCanvas.requestPaint(); horizonLines.requestPaint() }
+        function on_RollChanged()  { horizonLines.requestPaint() }
+        function on_PitchChanged() { horizonLines.requestPaint() }
     }
 
     // =========================================================================
@@ -613,120 +577,6 @@ Item {
     }
 
     // =========================================================================
-    // ENGINE + SPRAYER PANEL (top-left)
-    // =========================================================================
-    Rectangle {
-        id: enginePanel
-        anchors.left: parent.left
-        anchors.top: parent.top
-        anchors.leftMargin: parent.width * 0.02
-        anchors.topMargin: parent.height * 0.02
-        width: _fontSize * 11
-        height: engineCol.height + 10
-        color: Qt.rgba(0, 0, 0, 0.45)
-        radius: 4
-        visible: !_compact
-
-        ColumnLayout {
-            id: engineCol
-            anchors.left: parent.left
-            anchors.right: parent.right
-            anchors.top: parent.top
-            anchors.margins: 5
-            spacing: 1
-
-            // RPM
-            RowLayout {
-                spacing: 4
-                Text { text: "RPM"; color: "#8aaa8a"; font.pixelSize: _smallFont; font.family: "monospace"; style: Text.Outline; styleColor: "black" }
-                Text {
-                    text: _hasEfi ? Math.round(_efiRpm) : "---"
-                    color: _efiRpm > 7000 ? "#ff4444" : "white"
-                    font.pixelSize: _smallFont; font.family: "monospace"; font.bold: true
-                    style: Text.Outline; styleColor: "black"
-                }
-            }
-
-            // Fuel
-            RowLayout {
-                spacing: 4
-                Text { text: "FUEL"; color: "#8aaa8a"; font.pixelSize: _smallFont; font.family: "monospace"; style: Text.Outline; styleColor: "black" }
-                Text {
-                    text: _engineOk ? Math.round(_fuelPct) + "%" : "---"
-                    color: _fuelLow ? "#ff4444" : "white"
-                    font.pixelSize: _smallFont; font.family: "monospace"; font.bold: true
-                    style: Text.Outline; styleColor: "black"
-                }
-            }
-
-            // Throttle
-            RowLayout {
-                spacing: 4
-                Text { text: "THR"; color: "#8aaa8a"; font.pixelSize: _smallFont; font.family: "monospace"; style: Text.Outline; styleColor: "black" }
-                Text {
-                    text: _hasEfi ? Math.round(_efiThrottle) + "%" : "---"
-                    color: "white"
-                    font.pixelSize: _smallFont; font.family: "monospace"; font.bold: true
-                    style: Text.Outline; styleColor: "black"
-                }
-            }
-
-            // Oil pressure
-            RowLayout {
-                spacing: 4
-                Text { text: "OIL"; color: "#8aaa8a"; font.pixelSize: _smallFont; font.family: "monospace"; style: Text.Outline; styleColor: "black" }
-                Text {
-                    text: _engineOk ? _oilPressure.toFixed(1) + " bar" : "---"
-                    color: _oilLow ? "#ff4444" : "white"
-                    font.pixelSize: _smallFont; font.family: "monospace"; font.bold: true
-                    style: Text.Outline; styleColor: "black"
-                }
-            }
-
-            // CHT
-            RowLayout {
-                spacing: 4
-                Text { text: "CHT"; color: "#8aaa8a"; font.pixelSize: _smallFont; font.family: "monospace"; style: Text.Outline; styleColor: "black" }
-                Text {
-                    text: _hasEfi ? Math.round(_efiCht) + "\u00B0C" : "---"
-                    color: _efiCht > 240 ? "#ff4444" : (_efiCht > 200 ? "#ffaa00" : "white")
-                    font.pixelSize: _smallFont; font.family: "monospace"; font.bold: true
-                    style: Text.Outline; styleColor: "black"
-                }
-            }
-
-            // Separator
-            Rectangle { Layout.fillWidth: true; height: 1; color: Qt.rgba(1,1,1,0.2) }
-
-            // Sprayer: tank + pump
-            RowLayout {
-                spacing: 4
-                Text { text: "TANK"; color: "#8aaa8a"; font.pixelSize: _smallFont; font.family: "monospace"; style: Text.Outline; styleColor: "black" }
-                Text {
-                    text: _sprayerOk ? Math.round(_tankPct) + "%" : "---"
-                    color: _tankLow ? "#ff4444" : "#2196F3"
-                    font.pixelSize: _smallFont; font.family: "monospace"; font.bold: true
-                    style: Text.Outline; styleColor: "black"
-                }
-            }
-
-            RowLayout {
-                spacing: 4
-                Rectangle {
-                    width: _smallFont * 0.7; height: width; radius: width / 2
-                    color: _sprayerOk ? (_pumpActive ? "#44ff44" : "#ffaa00") : "#888"
-                }
-                Text {
-                    text: _sprayerOk ? (_pumpActive ? "PUMP ON" : "PUMP OFF") : "PUMP ---"
-                    color: _pumpActive ? "#44ff44" : "#ffaa00"
-                    font.pixelSize: _smallFont; font.family: "monospace"; font.bold: true
-                    style: Text.Outline; styleColor: "black"
-                }
-            }
-        }
-    }
-
-    // =========================================================================
     // COMPACT MODE OVERLAYS (when in pip)
     // =========================================================================
     Column {
@@ -767,28 +617,32 @@ Item {
     }
 
     // =========================================================================
-    // STATUS BAR (bottom)
+    // STATUS BAR (bottom) — new layout:
+    //   LEFT COLUMN: GS + Home    |  CENTER: Mode/Armed, GPS, Pump  |  RIGHT: Batt + Engine
     // =========================================================================
     Rectangle {
         id: statusBar
         anchors.bottom: parent.bottom
         anchors.horizontalCenter: parent.horizontalCenter
-        width: parent.width * 0.85
-        height: _fontSize * 3.2
-        color: Qt.rgba(0, 0, 0, 0.45)
+        width: parent.width * 0.92
+        height: statusContent.height + 8
+        color: Qt.rgba(0, 0, 0, 0.50)
         radius: 4
         anchors.bottomMargin: parent.height * 0.02
         visible: !_compact
 
-        ColumnLayout {
-            anchors.fill: parent
-            anchors.margins: 4
-            spacing: 1
+        RowLayout {
+            id: statusContent
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            anchors.margins: 6
+            spacing: 6
 
-            // Row 1: GS, Flight Mode, Armed, Battery
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: 8
+            // --- LEFT COLUMN: Speed + Home ---
+            ColumnLayout {
+                spacing: 1
+                Layout.alignment: Qt.AlignVCenter
 
                 Text {
                     text: "GS " + _gndSpeed.toFixed(1) + " m/s"
@@ -796,76 +650,145 @@ Item {
                     font.pixelSize: _smallFont; font.family: "monospace"
                     style: Text.Outline; styleColor: "black"
                 }
+                RowLayout {
+                    spacing: 4
+                    Text {
+                        text: {
+                            var dist = _distHome
+                            return "HOME " + (dist >= 1000 ? (dist / 1000).toFixed(1) + " km" : Math.round(dist) + " m")
+                        }
+                        color: "white"
+                        font.pixelSize: _smallFont; font.family: "monospace"
+                        style: Text.Outline; styleColor: "black"
+                    }
+                    Text {
+                        text: "\u2191"
+                        color: _accent
+                        font.pixelSize: _fontSize * 1.1; font.bold: true
+                        rotation: { var rel = _hdgHome - _heading; return ((rel % 360) + 360) % 360 }
+                        style: Text.Outline; styleColor: "black"
+                    }
+                }
+            }
 
-                Item { Layout.fillWidth: true }
+            Item { Layout.fillWidth: true }
 
-                Text {
-                    text: _flightMode
-                    color: _accent
-                    font.pixelSize: _fontSize; font.family: "monospace"; font.bold: true
-                    style: Text.Outline; styleColor: "black"
+            // --- CENTER COLUMN: Mode/Armed, GPS, Pump ---
+            ColumnLayout {
+                spacing: 1
+                Layout.alignment: Qt.AlignVCenter | Qt.AlignHCenter
+
+                // Row 1: Flight mode + Armed
+                RowLayout {
+                    Layout.alignment: Qt.AlignHCenter
+                    spacing: 6
+                    Text {
+                        text: _flightMode
+                        color: _accent
+                        font.pixelSize: _fontSize; font.family: "monospace"; font.bold: true
+                        style: Text.Outline; styleColor: "black"
+                    }
+                    Rectangle {
+                        width: _fontSize * 0.7; height: width; radius: width / 2
+                        color: _armed ? "#44ff44" : "#ff4444"
+                    }
+                    Text {
+                        text: _armed ? "ARMED" : "DISARMED"
+                        color: _armed ? "#44ff44" : "#ff4444"
+                        font.pixelSize: _smallFont; font.family: "monospace"; font.bold: true
+                        style: Text.Outline; styleColor: "black"
+                    }
                 }
 
-                Rectangle {
-                    width: _fontSize * 0.8; height: width; radius: width / 2
-                    color: _armed ? "#44ff44" : "#ff4444"
-                }
+                // Row 2: GPS
                 Text {
-                    text: _armed ? "ARMED" : "DISARMED"
-                    color: _armed ? "#44ff44" : "#ff4444"
+                    Layout.alignment: Qt.AlignHCenter
+                    text: "GPS: " + gpsLockName(_gpsLock) + " (" + Math.round(_gpsSats) + ")"
+                    color: _gpsLock >= 3 ? "#44ff44" : (_gpsLock >= 2 ? "#ffaa00" : "#ff4444")
                     font.pixelSize: _smallFont; font.family: "monospace"; font.bold: true
                     style: Text.Outline; styleColor: "black"
                 }
 
-                Item { Layout.fillWidth: true }
+                // Row 3: Pump status
+                RowLayout {
+                    Layout.alignment: Qt.AlignHCenter
+                    spacing: 4
+                    Rectangle {
+                        width: _smallFont * 0.7; height: width; radius: width / 2
+                        color: _sprayerOk ? (_pumpActive ? "#44ff44" : "#ffaa00") : "#888"
+                    }
+                    Text {
+                        text: _sprayerOk ? (_pumpActive ? "PUMP ON" : "PUMP OFF") : "PUMP ---"
+                        color: _pumpActive ? "#44ff44" : "#ffaa00"
+                        font.pixelSize: _smallFont; font.family: "monospace"; font.bold: true
+                        style: Text.Outline; styleColor: "black"
+                    }
+                    Text {
+                        text: _sprayerOk ? "TANK " + Math.round(_tankPct) + "%" : ""
+                        color: _tankLow ? "#ff4444" : "#2196F3"
+                        font.pixelSize: _smallFont; font.family: "monospace"; font.bold: true
+                        style: Text.Outline; styleColor: "black"
+                        visible: _sprayerOk
+                    }
+                }
+            }
 
+            Item { Layout.fillWidth: true }
+
+            // --- RIGHT COLUMN: Battery + Engine ---
+            ColumnLayout {
+                spacing: 1
+                Layout.alignment: Qt.AlignVCenter | Qt.AlignRight
+
+                // Battery
                 Text {
+                    Layout.alignment: Qt.AlignRight
                     text: _battVolts.toFixed(1) + "V  " + Math.round(_battPct) + "%"
                     color: _battPct < 20 ? "#ff4444" : (_battPct < 40 ? "#ffaa00" : "white")
                     font.pixelSize: _smallFont; font.family: "monospace"; font.bold: true
                     style: Text.Outline; styleColor: "black"
                 }
-            }
 
-            // Row 2: Home, GPS
-            RowLayout {
-                Layout.fillWidth: true
-                spacing: 8
-
-                Text {
-                    text: {
-                        var dist = _distHome
-                        var distStr = dist >= 1000 ? (dist / 1000).toFixed(1) + " km" : Math.round(dist) + " m"
-                        return "HOME " + distStr
+                // RPM + THR
+                RowLayout {
+                    Layout.alignment: Qt.AlignRight
+                    spacing: 6
+                    Text {
+                        text: "RPM " + (_hasEfi ? Math.round(_efiRpm) : "---")
+                        color: _efiRpm > 7000 ? "#ff4444" : "white"
+                        font.pixelSize: _smallFont; font.family: "monospace"
+                        style: Text.Outline; styleColor: "black"
                     }
-                    color: "white"
-                    font.pixelSize: _smallFont; font.family: "monospace"
-                    style: Text.Outline; styleColor: "black"
+                    Text {
+                        text: "THR " + (_hasEfi ? Math.round(_efiThrottle) + "%" : "---")
+                        color: "white"
+                        font.pixelSize: _smallFont; font.family: "monospace"
+                        style: Text.Outline; styleColor: "black"
+                    }
                 }
 
-                Text {
-                    text: "\u2191"
-                    color: _accent
-                    font.pixelSize: _fontSize * 1.2
-                    font.bold: true
-                    rotation: {
-                        var rel = _hdgHome - _heading
-                        return ((rel % 360) + 360) % 360
+                // Fuel + Oil + CHT
+                RowLayout {
+                    Layout.alignment: Qt.AlignRight
+                    spacing: 6
+                    Text {
+                        text: "FUEL " + (_engineOk ? Math.round(_fuelPct) + "%" : "---")
+                        color: _fuelLow ? "#ff4444" : "white"
+                        font.pixelSize: _smallFont; font.family: "monospace"
+                        style: Text.Outline; styleColor: "black"
                     }
-                    style: Text.Outline; styleColor: "black"
-                }
-
-                Item { Layout.fillWidth: true }
-
-                Text {
-                    text: {
-                        var lockNames = ["No GPS", "No Fix", "2D", "3D", "DGPS", "RTK Float", "RTK Fix"]
-                        var lockStr = (_gpsLock >= 0 && _gpsLock < lockNames.length) ? lockNames[Math.round(_gpsLock)] : "?"
-                        return "GPS: " + lockStr + " (" + Math.round(_gpsSats) + ")"
+                    Text {
+                        text: "OIL " + (_engineOk ? _oilPressure.toFixed(1) : "---")
+                        color: _oilLow ? "#ff4444" : "white"
+                        font.pixelSize: _smallFont; font.family: "monospace"
+                        style: Text.Outline; styleColor: "black"
                     }
-                    color: _gpsLock >= 3 ? "#44ff44" : (_gpsLock >= 2 ? "#ffaa00" : "#ff4444")
-                    font.pixelSize: _smallFont; font.family: "monospace"; font.bold: true
-                    style: Text.Outline; styleColor: "black"
+                    Text {
+                        text: "CHT " + (_hasEfi ? Math.round(_efiCht) + "\u00B0" : "---")
+                        color: _efiCht > 240 ? "#ff4444" : (_efiCht > 200 ? "#ffaa00" : "white")
+                        font.pixelSize: _smallFont; font.family: "monospace"
+                        style: Text.Outline; styleColor: "black"
+                    }
                 }
             }
         }
@@ -881,7 +804,6 @@ Item {
         spacing: 4
         visible: !_compact
 
-        // Over-temp
         Rectangle {
             width: _fontSize * 14; height: _fontSize * 1.6; radius: 4
             color: "#88ff0000"
@@ -899,7 +821,6 @@ Item {
             }
         }
 
-        // Oil low
         Rectangle {
             width: _fontSize * 14; height: _fontSize * 1.6; radius: 4
             color: "#88ff0000"
@@ -917,7 +838,6 @@ Item {
             }
         }
 
-        // Fuel low
         Rectangle {
             width: _fontSize * 14; height: _fontSize * 1.6; radius: 4
             color: "#88ff8800"
