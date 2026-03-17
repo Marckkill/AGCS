@@ -10,3 +10,4 @@ endif()
 
 # IMPORTANTE: NÃO desabilitar APM — o AGH 3000 usa ArduPlane
 set(QGC_ENABLE_GST_VIDEOSTREAMING OFF CACHE BOOL "Disable GStreamer" FORCE)
+set(QGC_ENABLE_QT_VIDEOSTREAMING ON CACHE BOOL "Enable QtMultimedia video streaming" FORCE)
