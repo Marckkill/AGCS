@@ -153,7 +153,8 @@ C:\Qt\6.8.3\msvc2022_64\bin\windeployqt.exe qgc\build\Release\AGCS.exe --qmldir 
 
 - **Locale bug:** QGC may crash or show parsing errors if Windows regional settings use comma as decimal separator. Set `LANG=en_US` or run with `--locale en_US` if you encounter this.
 - **qt-cmake.bat must use `call`:** When invoking `qt-cmake.bat` from another `.bat` file, always prefix with `call` — otherwise the calling script terminates after qt-cmake finishes.
-- **QtMultimedia disabled:** `QVideoFrame::unmap` null pointer dereference in `Qt6Multimedia.dll` caused crash after ~5 min of UVC video streaming (Qt 6.8.3 bug). **Fixed by disabling QtMultimedia entirely** — same as official QGC. Video (including UVC cameras) uses GStreamer only (`mfvideosrc` plugin).
+- **QtMultimedia UVC crash (Qt 6.8.3):** `QVideoFrame::unmap` null pointer dereference in `Qt6Multimedia.dll` causes a crash after ~5 minutes of USB camera (UVC) video streaming. This is a [known Qt 6.8.3 bug](https://bugreports.qt.io/). UVC cameras use the QtMultimedia path (`FlightDisplayViewUVC.qml`) regardless of GStreamer being enabled. **Workaround:** use RTSP/UDP video sources instead of USB cameras, which use the GStreamer pipeline and are not affected.
+- **GStreamer plugin path:** On Windows, `GStreamer.cc` looks for plugins at `<appDir>/../lib/gstreamer-1.0/`. The build script deploys them to `build/lib/gstreamer-1.0/` (one level above `build/Release/`). If RTSP/UDP video shows "Awaiting Video", verify the plugins are in the correct path.
 
 ## Pixhawk Lua Script
 
