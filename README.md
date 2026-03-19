@@ -102,6 +102,9 @@ custom/
 - Qt 6.8.3 (MSVC 2022)
 - Visual Studio 2022 Build Tools
 - CMake 3.22+
+- GStreamer 1.22.12 MSVC x64 (**Complete** installation, not Typical)
+  - Runtime: [gstreamer-1.0-msvc-x86_64-1.22.12.msi](https://gstreamer.freedesktop.org/data/pkg/windows/1.22.12/msvc/gstreamer-1.0-msvc-x86_64-1.22.12.msi)
+  - Dev: [gstreamer-1.0-devel-msvc-x86_64-1.22.12.msi](https://gstreamer.freedesktop.org/data/pkg/windows/1.22.12/msvc/gstreamer-1.0-devel-msvc-x86_64-1.22.12.msi)
 
 ### Steps
 
@@ -123,11 +126,11 @@ C:\CC\build_agcs.bat
 
 The script handles the full pipeline:
 1. Sets up MSVC x64 environment via `vcvarsall.bat amd64`
-2. Adds Qt CMake + Ninja to PATH
+2. Adds Qt CMake + Ninja + GStreamer to PATH
 3. Cleans previous build directory
 4. Configures with `qt-cmake` (Ninja generator, Release)
 5. Builds with `cmake --build`
-6. Deploys Qt DLLs with `windeployqt`
+6. Deploys Qt DLLs with `windeployqt` + GStreamer DLLs and plugins
 
 Output: `C:\CC\qgc\build\Release\AGCS.exe`
 
@@ -150,7 +153,7 @@ C:\Qt\6.8.3\msvc2022_64\bin\windeployqt.exe qgc\build\Release\AGCS.exe --qmldir 
 
 - **Locale bug:** QGC may crash or show parsing errors if Windows regional settings use comma as decimal separator. Set `LANG=en_US` or run with `--locale en_US` if you encounter this.
 - **qt-cmake.bat must use `call`:** When invoking `qt-cmake.bat` from another `.bat` file, always prefix with `call` — otherwise the calling script terminates after qt-cmake finishes.
-- **QtMultimedia crash (Qt 6.8.3):** `QVideoFrame::unmap` null pointer dereference in `Qt6Multimedia.dll` causes crash after ~5 min of video streaming (UVC cameras). This is a Qt bug, not AGCS. Workaround: use GStreamer backend instead of QtMultimedia, or avoid leaving video stream open for extended periods.
+- **QtMultimedia disabled:** `QVideoFrame::unmap` null pointer dereference in `Qt6Multimedia.dll` caused crash after ~5 min of UVC video streaming (Qt 6.8.3 bug). **Fixed by disabling QtMultimedia entirely** — same as official QGC. Video (including UVC cameras) uses GStreamer only (`mfvideosrc` plugin).
 
 ## Pixhawk Lua Script
 

@@ -9,5 +9,7 @@ if(EXISTS ${CMAKE_SOURCE_DIR}/custom/deploy/windows/AGCS.ico)
 endif()
 
 # IMPORTANTE: NÃO desabilitar APM — o AGH 3000 usa ArduPlane
-set(QGC_ENABLE_GST_VIDEOSTREAMING OFF CACHE BOOL "Disable GStreamer" FORCE)
-set(QGC_ENABLE_QT_VIDEOSTREAMING ON CACHE BOOL "Enable QtMultimedia video streaming" FORCE)
+# GStreamer only — QtMultimedia disabled due to QVideoFrame::unmap crash (Qt 6.8.3 bug)
+# UVC cameras work via GStreamer plugin mfvideosrc (same as official QGC)
+set(QGC_ENABLE_GST_VIDEOSTREAMING ON CACHE BOOL "Enable GStreamer video streaming" FORCE)
+set(QGC_ENABLE_QT_VIDEOSTREAMING OFF CACHE BOOL "Disabled — Qt 6.8.3 crash bug" FORCE)
