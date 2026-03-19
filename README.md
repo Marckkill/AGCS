@@ -48,6 +48,20 @@ Real-time spray system data via `NAMED_VALUE_FLOAT` (MAVLink msg 251):
 - Detachable — drag to a second monitor
 - Native OS window with minimize/maximize/close buttons
 
+### FPV Head-Up Display (HUD)
+Toggle button on the fly view (above AGH Telemetry widget) enables a full FPV HUD overlay on the video stream:
+- **Line-only artificial horizon** — white horizon line + pitch ladder, no colored sky/ground (video fully visible)
+- **Heading tape** — compass with cardinal points and degree readout
+- **Speed tape** — airspeed (IAS) or ground speed with scrolling ladder
+- **Altitude tape** — relative altitude with scrolling ladder
+- **VSI** — vertical speed indicator bar with numeric readout
+- **Status bar** (3-column layout):
+  - Left: ground speed, home distance + direction arrow
+  - Center: flight mode + armed state, GPS fix, pump ON/OFF + tank %
+  - Right: battery voltage/%, RPM + throttle, fuel + oil + CHT
+- **Critical alerts** — flashing warnings for over-temp, low oil pressure, low fuel
+- Compact mode for PiP (picture-in-picture) windows
+
 ## Architecture
 
 ```
@@ -68,7 +82,9 @@ custom/
 ├── src/
 │   ├── AgrohawkPlugin.h/cc        # QGCCorePlugin subclass
 │   ├── AgrohawkSprayerTelemetry.h/cc  # NAMED_VALUE_FLOAT handler
-│   └── FlyViewCustomLayer.qml     # Fly view overlay + pop-out window
+│   ├── FlyViewCustomLayer.qml     # Fly view overlay + pop-out window
+│   ├── FlyViewVideo.qml           # Video stream pop-out with HUD toggle
+│   └── FpvHud.qml                 # FPV Head-Up Display overlay
 ├── CMakeLists.txt                 # Build config
 └── custom.qrc                     # Qt resources
 ```
@@ -86,6 +102,9 @@ custom/
 - Qt 6.8.3 (MSVC 2022)
 - Visual Studio 2022 Build Tools
 - CMake 3.22+
+- GStreamer 1.22.12 MSVC x64 (**Complete** installation, not Typical)
+  - Runtime: [gstreamer-1.0-msvc-x86_64-1.22.12.msi](https://gstreamer.freedesktop.org/data/pkg/windows/1.22.12/msvc/gstreamer-1.0-msvc-x86_64-1.22.12.msi)
+  - Dev: [gstreamer-1.0-devel-msvc-x86_64-1.22.12.msi](https://gstreamer.freedesktop.org/data/pkg/windows/1.22.12/msvc/gstreamer-1.0-devel-msvc-x86_64-1.22.12.msi)
 
 ### Steps
 
@@ -95,17 +114,46 @@ git clone --recursive -b Stable_V5.0 https://github.com/mavlink/qgroundcontrol.g
 
 # 2. Copy custom/ into qgc/
 cp -r custom/ qgc/custom/
-
-# 3. Configure
-cmake -S qgc -B qgc/build -G "Visual Studio 17 2022" -A x64 \
-  -DCMAKE_PREFIX_PATH="C:/Qt/6.8.3/msvc2022_64"
-
-# 4. Build
-cmake --build qgc/build --config Release
-
-# 5. Deploy Qt DLLs
-windeployqt qgc/build/Release/AGCS.exe --qmldir qgc/src
 ```
+
+### Build (Windows — Automated)
+
+Use the included `build_agcs.bat` script (must run in **cmd.exe**, not PowerShell):
+
+```cmd
+C:\CC\build_agcs.bat
+```
+
+The script handles the full pipeline:
+1. Sets up MSVC x64 environment via `vcvarsall.bat amd64`
+2. Adds Qt CMake + Ninja + GStreamer to PATH
+3. Cleans previous build directory
+4. Configures with `qt-cmake` (Ninja generator, Release)
+5. Builds with `cmake --build`
+6. Deploys Qt DLLs with `windeployqt` + GStreamer DLLs and plugins
+
+Output: `C:\CC\qgc\build\Release\AGCS.exe`
+
+> **Important:** Always build from `cmd.exe` — the MSVC `vcvarsall.bat` does not work in PowerShell. Running from PowerShell will cause missing C++ standard library headers (`type_traits`, `memory`, etc.)
+
+### Build (Manual)
+
+If building manually, ensure `vcvarsall.bat amd64` is called first in the same cmd session:
+
+```cmd
+"C:\Program Files (x86)\Microsoft Visual Studio\2022\BuildTools\VC\Auxiliary\Build\vcvarsall.bat" amd64
+set PATH=C:\Qt\Tools\Ninja;C:\Qt\Tools\CMake_64\bin;%PATH%
+
+call C:\Qt\6.8.3\msvc2022_64\bin\qt-cmake.bat -B qgc\build -S qgc -G Ninja -DCMAKE_BUILD_TYPE=Release
+cmake --build qgc\build
+C:\Qt\6.8.3\msvc2022_64\bin\windeployqt.exe qgc\build\Release\AGCS.exe --qmldir qgc\src
+```
+
+### Known Issues
+
+- **Locale bug:** QGC may crash or show parsing errors if Windows regional settings use comma as decimal separator. Set `LANG=en_US` or run with `--locale en_US` if you encounter this.
+- **qt-cmake.bat must use `call`:** When invoking `qt-cmake.bat` from another `.bat` file, always prefix with `call` — otherwise the calling script terminates after qt-cmake finishes.
+- **QtMultimedia disabled:** `QVideoFrame::unmap` null pointer dereference in `Qt6Multimedia.dll` caused crash after ~5 min of UVC video streaming (Qt 6.8.3 bug). **Fixed by disabling QtMultimedia entirely** — same as official QGC. Video (including UVC cameras) uses GStreamer only (`mfvideosrc` plugin).
 
 ## Pixhawk Lua Script
 

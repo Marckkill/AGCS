@@ -31,6 +31,10 @@ Item {
 
     property var _popoutWindow: null
 
+    // FPV HUD toggle state (shared with FlyViewVideo.qml via settings key)
+    readonly property string _fpvHudSettingsKey: "AgrohawkFpvHudVisible"
+    property bool _fpvHudVisible: QGroundControl.loadBoolGlobalSetting(_fpvHudSettingsKey, false)
+
     QGCToolInsets {
         id:                     _totalToolInsets
         leftEdgeTopInset:       parentToolInsets.leftEdgeTopInset
@@ -258,6 +262,65 @@ Item {
                 }
             }
         }
+    }
+
+    // =========================================================================
+    // Botão HUD FPV — acima do widget de telemetria
+    // =========================================================================
+    Rectangle {
+        id: fpvHudToggle
+        width: ScreenTools.defaultFontPixelWidth * 32
+        height: ScreenTools.defaultFontPixelHeight * 2.2
+        anchors.right:          parent.right
+        anchors.bottom:         telemetryWidget.top
+        anchors.rightMargin:    _toolsMargin
+        anchors.bottomMargin:   _toolsMargin
+        color:   _fpvHudVisible ? Qt.rgba(0.95, 0.43, 0.19, 0.85) : _agWidgetBg
+        radius:  ScreenTools.defaultFontPixelWidth * 0.5
+        border.color: _fpvHudVisible ? _agOrange : Qt.rgba(0.2, 0.4, 0.2, 0.5)
+        border.width: 1
+        visible: _activeVehicle
+
+        RowLayout {
+            anchors.fill: parent
+            anchors.margins: ScreenTools.defaultFontPixelWidth * 0.5
+            spacing: ScreenTools.defaultFontPixelWidth * 0.5
+
+            Rectangle {
+                width: ScreenTools.defaultFontPixelHeight * 1.4
+                height: width
+                radius: width / 2
+                color: _fpvHudVisible ? "white" : Qt.rgba(1, 1, 1, 0.3)
+                Layout.alignment: Qt.AlignVCenter
+
+                Text {
+                    anchors.centerIn: parent
+                    text: "HUD"
+                    color: _fpvHudVisible ? _agOrange : "#8aaa8a"
+                    font.bold: true
+                    font.pixelSize: parent.width * 0.32
+                    font.family: "monospace"
+                }
+            }
+
+            QGCLabel {
+                text: _fpvHudVisible ? "FPV HUD ON" : "FPV HUD OFF"
+                color: _fpvHudVisible ? "white" : "#8aaa8a"
+                font.bold: true
+                Layout.fillWidth: true
+            }
+        }
+
+        MouseArea {
+            anchors.fill: parent
+            cursorShape: Qt.PointingHandCursor
+            onClicked: {
+                _fpvHudVisible = !_fpvHudVisible
+                QGroundControl.saveBoolGlobalSetting(_fpvHudSettingsKey, _fpvHudVisible)
+            }
+        }
+
+        Behavior on color { ColorAnimation { duration: 200 } }
     }
 
     // =========================================================================
